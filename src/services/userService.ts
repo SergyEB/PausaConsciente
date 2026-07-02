@@ -34,10 +34,18 @@ export type OnboardingData = {
   reminderSettings: OnboardingReminderSettings;
 };
 
+export type UserGamification = {
+  level: number;
+  experience: number;
+  energy: number;
+  gardenImageLevel: number;
+};
+
 export type UserProfile = {
   uid: string;
   name: string;
   email: string;
+  gamification?: UserGamification;
   onboarding?: OnboardingData & {
     completedAt?: unknown;
   };
@@ -89,6 +97,28 @@ const logFirebaseError = (context: string, error: unknown) => {
   console.error(`[${context}]`, error);
 };
 
+export const getLevelFromEnergy = (energy: number) => {
+  if (energy >= 100) {
+    return 3;
+  }
+
+  if (energy >= 50) {
+    return 2;
+  }
+
+  return 1;
+};
+
+export const getGardenImageLevelFromEnergy = (energy: number) =>
+  getLevelFromEnergy(energy);
+
+export const getDefaultGamification = (): UserGamification => ({
+  level: 1,
+  experience: 0,
+  energy: 0,
+  gardenImageLevel: 1,
+});
+
 export const registerUser = async ({
   name,
   email,
@@ -115,6 +145,12 @@ export const registerUser = async ({
           uid: userCredential.user.uid,
           name: trimmedName,
           email: normalizedEmail,
+          gamification: {
+            level: 1,
+            experience: 0,
+            energy: 0,
+            gardenImageLevel: 1,
+          },
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },
@@ -193,6 +229,35 @@ export const saveUserOnboarding = async (onboarding: OnboardingData) => {
   }
 };
 
+export const updateUserOnboarding = async (
+  onboarding: Partial<OnboardingData>
+) => {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    throw new Error('No hay un usuario autenticado para actualizar el onboarding.');
+  }
+
+  try {
+    const currentProfile = await getCurrentUserProfile();
+
+    await setDoc(
+      doc(db, 'users', currentUser.uid),
+      {
+        onboarding: {
+          ...currentProfile.onboarding,
+          ...onboarding,
+        },
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    logFirebaseError('updateUserOnboarding', error);
+    throw new Error(mapFirebaseError(error));
+  }
+};
+
 export const getCurrentUserProfile = async () => {
   const currentUser = auth.currentUser;
 
@@ -208,10 +273,16 @@ export const getCurrentUserProfile = async () => {
         uid: currentUser.uid,
         name: currentUser.displayName ?? '',
         email: currentUser.email ?? '',
+        gamification: getDefaultGamification(),
       } satisfies UserProfile;
     }
 
-    return userSnapshot.data() as UserProfile;
+    const userProfile = userSnapshot.data() as UserProfile;
+
+    return {
+      ...userProfile,
+      gamification: userProfile.gamification ?? getDefaultGamification(),
+    };
   } catch (error) {
     logFirebaseError('getCurrentUserProfile', error);
     throw new Error(mapFirebaseError(error));

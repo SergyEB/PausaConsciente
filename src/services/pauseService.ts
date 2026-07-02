@@ -1,13 +1,19 @@
 import {
   addDoc,
   collection,
+  doc,
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
 
 import { auth, db } from '@/services/firebaseConfig';
+import {
+  getGardenImageLevelFromEnergy,
+  getLevelFromEnergy,
+} from '@/services/userService';
 
 export type UserPause = {
   id: string;
@@ -89,10 +95,32 @@ export const completePause = async (pause: {
   duration: number;
 }) => {
   const uid = getCurrentUserId();
+  const userRef = doc(db, 'users', uid);
+  const completedPausesRef = collection(db, 'users', uid, 'completedPauses');
 
-  await addDoc(collection(db, 'users', uid, 'completedPauses'), {
-    ...pause,
-    completedAt: serverTimestamp(),
+  await runTransaction(db, async (transaction) => {
+    const userSnapshot = await transaction.get(userRef);
+    const currentEnergy = userSnapshot.data()?.gamification?.energy ?? 0;
+    const nextEnergy = currentEnergy + 15;
+
+    transaction.set(
+      userRef,
+      {
+        gamification: {
+          level: getLevelFromEnergy(nextEnergy),
+          experience: nextEnergy,
+          energy: nextEnergy,
+          gardenImageLevel: getGardenImageLevelFromEnergy(nextEnergy),
+        },
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    transaction.set(doc(completedPausesRef), {
+      ...pause,
+      completedAt: serverTimestamp(),
+    });
   });
 };
 
