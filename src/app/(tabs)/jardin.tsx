@@ -49,7 +49,7 @@ export default function GardenScreen() {
 
         <Pressable
           style={styles.achievementsButton}
-          onPress={() => router.push("../progreso/logros")}
+          onPress={() => router.push("../jardin/logros")}
         >
           <Award size={18} color={colors.foreground} />
           <Text style={styles.achievementsButtonText}>Logros</Text>
