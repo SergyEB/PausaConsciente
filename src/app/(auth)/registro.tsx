@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import { useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -8,8 +10,55 @@ import {
   View,
 } from 'react-native';
 
+import { registerUser } from '@/services/userService';
+
 export default function RegisterScreen() {
   const router = useRouter();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRegister = async () => {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
+      setError('Completa todos los campos.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('La contrasena debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Las contrasenas no coinciden.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await registerUser({
+        name: trimmedName,
+        email: trimmedEmail,
+        password,
+      });
+      router.replace('/onboarding/motivo');
+    } catch (serviceError) {
+      setError(
+        serviceError instanceof Error
+          ? serviceError.message
+          : 'No se pudo crear la cuenta.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -21,11 +70,7 @@ export default function RegisterScreen() {
           ]}
           onPress={() => router.back()}
         >
-          <ArrowLeft
-            size={24}
-            color={colors.foreground}
-            strokeWidth={2.4}
-          />
+          <ArrowLeft size={24} color={colors.foreground} strokeWidth={2.4} />
         </Pressable>
 
         <View style={styles.headerSpacer} />
@@ -34,9 +79,8 @@ export default function RegisterScreen() {
 
       <View style={styles.content}>
         <Text style={styles.title}>Crea tu cuenta</Text>
-
         <Text style={styles.subtitle}>
-          Empieza a construir una relación más saludable con tu celular.
+          Empieza a construir una relacion mas saludable con tu celular.
         </Text>
 
         <View style={styles.form}>
@@ -44,51 +88,63 @@ export default function RegisterScreen() {
             style={styles.input}
             placeholder="Nombre"
             placeholderTextColor={colors.mutedForeground}
+            value={name}
+            onChangeText={setName}
           />
-
           <TextInput
             style={styles.input}
-            placeholder="Correo electrónico"
+            placeholder="Correo electronico"
             placeholderTextColor={colors.mutedForeground}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            value={email}
+            onChangeText={setEmail}
           />
-
           <TextInput
             style={styles.input}
-            placeholder="Contraseña"
+            placeholder="Contrasena"
             placeholderTextColor={colors.mutedForeground}
             secureTextEntry
+            value={password}
+            onChangeText={setPassword}
           />
-
           <TextInput
             style={styles.input}
-            placeholder="Confirmar contraseña"
+            placeholder="Confirmar contrasena"
             placeholderTextColor={colors.mutedForeground}
             secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
           />
         </View>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <Pressable
           style={({ pressed }) => [
             styles.primaryButton,
+            isSubmitting && styles.primaryButtonDisabled,
             pressed && styles.primaryButtonPressed,
           ]}
-          onPress={() => router.push('../onboarding/motivo')}
+          onPress={handleRegister}
+          disabled={isSubmitting}
         >
-          <Text style={styles.primaryButtonText}>Crear cuenta</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.primaryForeground} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Crear cuenta</Text>
+          )}
         </Pressable>
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
-
+        <Text style={styles.footerText}>Ya tienes cuenta? </Text>
         <Pressable
           onPress={() => router.push('/(auth)/login')}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <Text style={styles.footerLink}>Inicia sesión</Text>
+          <Text style={styles.footerLink}>Inicia sesion</Text>
         </Pressable>
       </View>
     </View>
@@ -111,7 +167,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-
   header: {
     height: 56,
     marginTop: 8,
@@ -119,7 +174,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
   backButton: {
     width: 40,
     height: 40,
@@ -128,17 +182,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   headerSpacer: {
     width: 40,
     height: 40,
   },
-
   content: {
     flex: 1,
     paddingTop: 16,
   },
-
   title: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 30,
@@ -146,7 +197,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: 8,
   },
-
   subtitle: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
@@ -154,12 +204,10 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     marginBottom: 32,
   },
-
   form: {
     gap: 16,
-    marginBottom: 40,
+    marginBottom: 16,
   },
-
   input: {
     width: '100%',
     height: 54,
@@ -173,7 +221,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.foreground,
   },
-
+  errorText: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#dc2626',
+    marginBottom: 24,
+  },
   primaryButton: {
     width: '100%',
     height: 52,
@@ -190,41 +244,38 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-
   primaryButtonText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 16,
     lineHeight: 24,
     color: colors.primaryForeground,
   },
-
   footer: {
     paddingBottom: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   footerText: {
     fontFamily: 'Nunito_400Regular',
     fontSize: 16,
     lineHeight: 24,
     color: colors.mutedForeground,
   },
-
   footerLink: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 16,
     lineHeight: 24,
     color: colors.primary,
   },
-
   pressed: {
     opacity: 0.7,
   },
-
   primaryButtonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+  primaryButtonDisabled: {
+    opacity: 0.8,
   },
 });
