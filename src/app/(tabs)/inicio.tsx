@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { getCurrentUserProfile, UserProfile } from '@/services/userService';
+import { getPauseStats } from '@/services/pauseService';
 
 const colors = {
   background: '#fafaf9',
@@ -31,6 +32,8 @@ const colors = {
 export default function HomeScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [completedToday, setCompletedToday] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,14 +41,21 @@ export default function HomeScreen() {
 
       const loadProfile = async () => {
         try {
-          const userProfile = await getCurrentUserProfile();
+          const [userProfile, pauseStats] = await Promise.all([
+            getCurrentUserProfile(),
+            getPauseStats(),
+          ]);
 
           if (isActive) {
             setProfile(userProfile);
+            setCompletedToday(pauseStats.completedToday);
+            setStreak(pauseStats.streak);
           }
         } catch {
           if (isActive) {
             setProfile(null);
+            setCompletedToday(0);
+            setStreak(0);
           }
         }
       };
@@ -66,8 +76,8 @@ export default function HomeScreen() {
     subtitle:
       profile?.onboarding?.reason || 'Listo para un descanso?',
     stats: {
-      completedToday: 2,
-      streak: 5,
+      completedToday,
+      streak,
       gardenLevel: 3,
       energy: 75,
     },
