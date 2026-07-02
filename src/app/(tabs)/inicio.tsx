@@ -10,8 +10,8 @@ import {
   View,
 } from 'react-native';
 
-import { getCurrentUserProfile, UserProfile } from '@/services/userService';
 import { getPauseStats } from '@/services/pauseService';
+import { getCurrentUserProfile, UserProfile } from '@/services/userService';
 
 const colors = {
   background: '#fafaf9',
@@ -69,17 +69,20 @@ export default function HomeScreen() {
   );
 
   const state = {
+    gamification: profile?.gamification ?? {
+      level: 1,
+      experience: 0,
+      energy: 0,
+      gardenImageLevel: 1,
+    },
     user: { name: profile?.name?.trim() || 'Usuario' },
     goal: profile?.onboarding?.goal || 'Define tu primera meta',
     nextSupport:
       profile?.onboarding?.supportTime || 'Configura cuando necesitas mas apoyo',
-    subtitle:
-      profile?.onboarding?.reason || 'Listo para un descanso?',
+    subtitle: profile?.onboarding?.reason || 'Listo para un descanso?',
     stats: {
       completedToday,
       streak,
-      gardenLevel: 3,
-      energy: 75,
     },
   };
 
@@ -144,9 +147,9 @@ export default function HomeScreen() {
 
       <View style={styles.gardenCard}>
         <Pressable onPress={() => router.push('../jardin')}>
-          <Text style={styles.gardenTitle}>Tu jardín crece</Text>
+          <Text style={styles.gardenTitle}>Tu jardin crece</Text>
           <Text style={styles.gardenSubtitle}>
-            Nivel {state.stats.gardenLevel} {state.stats.energy}/100 energí­a
+            Nivel {state.gamification.level} {state.gamification.energy}/100 energia
           </Text>
         </Pressable>
       </View>
