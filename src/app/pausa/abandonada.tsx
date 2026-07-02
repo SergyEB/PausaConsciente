@@ -3,12 +3,15 @@ import { useRouter } from "expo-router";
 import { Heart } from "lucide-react-native";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+
+import { abandonPause } from '@/services/pauseService';
 
 const colors = {
   background: "#fafaf9",
@@ -24,6 +27,7 @@ export default function PauseAbandonedScreen() {
   const router = useRouter();
 
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const reasons = [
     "Estaba ocupado",
@@ -31,6 +35,20 @@ export default function PauseAbandonedScreen() {
     "No era buen momento",
     "Otro motivo",
   ];
+
+  const handleBackHome = async () => {
+    try {
+      setIsSaving(true);
+      await abandonPause({
+        type: 'Pausa consciente',
+        duration: 20,
+        reason: selectedReason ?? undefined,
+      });
+      router.replace("../(tabs)/inicio");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -85,9 +103,14 @@ export default function PauseAbandonedScreen() {
         <View style={styles.buttonContainer}>
           <Pressable
             style={styles.primaryButton}
-            onPress={() => router.replace("../(tabs)/inicio")}
+            onPress={handleBackHome}
+            disabled={isSaving}
           >
-            <Text style={styles.primaryButtonText}>Volver al inicio</Text>
+            {isSaving ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Volver al inicio</Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>

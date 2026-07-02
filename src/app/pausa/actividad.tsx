@@ -1,58 +1,94 @@
 // app/create-pause-activity.tsx
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
+import { useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-} from "react-native";
+} from 'react-native';
+
+import { createUserPause } from '@/services/pauseService';
 
 const colors = {
-  background: "#fafaf9",
-  foreground: "#2d3748",
-  primary: "#6ee7b7",
-  primaryForeground: "#064e3b",
-  muted: "#f1f5f9",
-  mutedForeground: "#64748b",
-  border: "#e2e8f0",
+  background: '#fafaf9',
+  foreground: '#2d3748',
+  primary: '#6ee7b7',
+  primaryForeground: '#064e3b',
+  muted: '#f1f5f9',
+  mutedForeground: '#64748b',
+  border: '#e2e8f0',
 };
 
 const activities = [
-  "Respirar",
-  "Caminar",
-  "Estirar",
-  "Tomar agua",
-  "Descansar la vista",
-  "Prepararse para dormir",
-  "Ordenar el escritorio",
+  'Respirar',
+  'Caminar',
+  'Estirar',
+  'Tomar agua',
+  'Descansar la vista',
+  'Prepararse para dormir',
+  'Ordenar el escritorio',
 ];
 
 export default function CreatePauseActivityScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const [selectedActivity, setSelectedActivity] = useState("Tomar agua");
+  const [selectedActivity, setSelectedActivity] = useState('Tomar agua');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSavePause = () => {
-    router.push({
-      pathname: "../pausa/confirmacion",
-      params: {
-        type: params.type?.toString() || "Pausa de estudio",
-        duration: params.duration?.toString() || "10",
-        startTime: params.startTime?.toString() || "16:00",
-        frequency: params.frequency?.toString() || "Diaria",
-        activeDays: params.activeDays?.toString() || "0,1,2,3,4",
+  const handleSavePause = async () => {
+    const type = params.type?.toString() || 'Pausa de estudio';
+    const duration = Number(params.duration?.toString() || '10');
+    const startTime = params.startTime?.toString() || '16:00';
+    const frequency = params.frequency?.toString() || 'Diaria';
+    const activeDays = (params.activeDays?.toString() || '0,1,2,3,4')
+      .split(',')
+      .filter(Boolean)
+      .map((day) => Number(day));
+
+    try {
+      setIsSaving(true);
+      setError('');
+
+      await createUserPause({
+        type,
+        duration,
+        startTime,
+        frequency,
+        activeDays,
         activity: selectedActivity,
-      },
-    });
+        active: true,
+      });
+
+      router.push({
+        pathname: '../pausa/confirmacion',
+        params: {
+          type,
+          duration: duration.toString(),
+          startTime,
+          frequency,
+          activeDays: activeDays.join(','),
+          activity: selectedActivity,
+        },
+      });
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'No se pudo guardar la pausa.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <View style={styles.screen}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color={colors.foreground} />
@@ -98,12 +134,25 @@ export default function CreatePauseActivityScreen() {
             );
           })}
         </View>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </ScrollView>
 
-      {/* Botón inferior */}
       <View style={styles.bottomContainer}>
-        <Pressable style={styles.primaryButton} onPress={handleSavePause}>
-          <Text style={styles.primaryButtonText}>Guardar pausa</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.primaryButton,
+            isSaving && styles.primaryButtonDisabled,
+            pressed && styles.primaryButtonPressed,
+          ]}
+          onPress={handleSavePause}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator color={colors.primaryForeground} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Guardar pausa</Text>
+          )}
         </Pressable>
       </View>
     </View>
@@ -111,124 +160,111 @@ export default function CreatePauseActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  // flex-1 bg-background
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
-
-  // Header original: flex items-center justify-between p-4 bg-background/80
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "rgba(250,250,249,0.8)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    backgroundColor: 'rgba(250,250,249,0.8)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-
-  // p-2 -ml-2 rounded-full
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: -8,
   },
-
-  // text-lg font-semibold text-foreground
   headerTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.foreground,
-    textAlign: "center",
+    textAlign: 'center',
   },
-
-  // w-10
   headerRightSpace: {
     width: 40,
   },
-
   scroll: {
     flex: 1,
   },
-
-  // flex-1 pt-4
   content: {
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 32,
   },
-
-  // text-muted-foreground mb-6
   description: {
     fontSize: 16,
     color: colors.mutedForeground,
     lineHeight: 24,
     marginBottom: 24,
   },
-
-  // flex flex-wrap gap-2
   activitiesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
-
-  // px-4 py-2.5 rounded-full font-semibold border-2
   activityChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
-
-  // selected: border-primary bg-primary/10 text-primary
   activityChipSelected: {
     borderColor: colors.primary,
-    backgroundColor: "rgba(110,231,183,0.1)",
+    backgroundColor: 'rgba(110,231,183,0.1)',
   },
-
   activityText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.mutedForeground,
   },
-
   activityTextSelected: {
     color: colors.primaryForeground,
   },
-
-  // pt-4 mt-auto
+  errorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+    marginTop: 20,
+    textAlign: 'center',
+  },
   bottomContainer: {
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
     backgroundColor: colors.background,
   },
-
-  // Button primary
   primaryButton: {
-    width: "100%",
+    width: '100%',
     backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 16,
     elevation: 3,
   },
-
+  primaryButtonDisabled: {
+    opacity: 0.8,
+  },
+  primaryButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
   primaryButtonText: {
     color: colors.primaryForeground,
-    fontWeight: "600",
+    fontWeight: '600',
     fontSize: 16,
   },
 });

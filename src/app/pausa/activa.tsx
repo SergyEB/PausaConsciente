@@ -3,12 +3,15 @@ import { useRouter } from "expo-router";
 import { Leaf } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+
+import { completePause } from '@/services/pauseService';
 
 const colors = {
   background: "#fafaf9",
@@ -27,6 +30,7 @@ const PAUSE_DURATION = 20 * 60;
 export default function PauseTimerScreen() {
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState(PAUSE_DURATION);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -49,6 +53,19 @@ export default function PauseTimerScreen() {
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - circumference * progress;
+
+  const handleFinishPause = async () => {
+    try {
+      setIsFinishing(true);
+      await completePause({
+        type: 'Pausa consciente',
+        duration: Math.floor(PAUSE_DURATION / 60),
+      });
+      router.push('../pausa/completada');
+    } finally {
+      setIsFinishing(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -110,9 +127,14 @@ export default function PauseTimerScreen() {
 
         <Pressable
           style={styles.primaryButton}
-          onPress={() => router.push("../pausa/completada")}
+          onPress={handleFinishPause}
+          disabled={isFinishing}
         >
-          <Text style={styles.primaryButtonText}>Finalizar pausa</Text>
+          {isFinishing ? (
+            <ActivityIndicator color={colors.primaryForeground} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Finalizar pausa</Text>
+          )}
         </Pressable>
 
         <Pressable
