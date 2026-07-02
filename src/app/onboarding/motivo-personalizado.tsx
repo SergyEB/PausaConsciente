@@ -9,9 +9,25 @@ import {
   View,
 } from 'react-native';
 
+import { useOnboarding } from '@/context/OnboardingContext';
+
 export default function OnboardingCustomScreen() {
   const router = useRouter();
-  const [reason, setReason] = useState('');
+  const { onboarding, setReason } = useOnboarding();
+  const [reason, setLocalReason] = useState(
+    onboarding.reason === 'Otro motivo' ? '' : onboarding.reason
+  );
+
+  const handleSave = () => {
+    const trimmedReason = reason.trim();
+
+    if (!trimmedReason) {
+      return;
+    }
+
+    setReason(trimmedReason);
+    router.push('/onboarding/meta');
+  };
 
   return (
     <View style={styles.container}>
@@ -23,11 +39,7 @@ export default function OnboardingCustomScreen() {
           ]}
           onPress={() => router.back()}
         >
-          <ArrowLeft
-            size={24}
-            color={colors.foreground}
-            strokeWidth={2.4}
-          />
+          <ArrowLeft size={24} color={colors.foreground} strokeWidth={2.4} />
         </Pressable>
 
         <View style={styles.headerSpacer} />
@@ -40,7 +52,7 @@ export default function OnboardingCustomScreen() {
         <TextInput
           style={styles.textArea}
           value={reason}
-          onChangeText={setReason}
+          onChangeText={setLocalReason}
           placeholder="Ejemplo: Quiero dejar de usar el celular tan tarde porque me cuesta dormir."
           placeholderTextColor={colors.mutedForeground}
           multiline
@@ -51,9 +63,11 @@ export default function OnboardingCustomScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
+              !reason.trim() && styles.primaryButtonDisabled,
               pressed && styles.primaryButtonPressed,
             ]}
-            onPress={() => router.push('/onboarding/meta')}
+            onPress={handleSave}
+            disabled={!reason.trim()}
           >
             <Text style={styles.primaryButtonText}>Guardar motivo</Text>
           </Pressable>
@@ -89,7 +103,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
   },
-
   header: {
     height: 56,
     marginTop: 8,
@@ -97,7 +110,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
   backButton: {
     width: 40,
     height: 40,
@@ -106,17 +118,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   headerSpacer: {
     width: 40,
     height: 40,
   },
-
   content: {
     flex: 1,
     paddingTop: 24,
   },
-
   title: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 30,
@@ -124,7 +133,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: 24,
   },
-
   textArea: {
     width: '100%',
     height: 160,
@@ -138,12 +146,10 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.foreground,
   },
-
   buttonsContainer: {
     marginTop: 32,
     gap: 12,
   },
-
   primaryButton: {
     width: '100%',
     height: 52,
@@ -151,23 +157,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
   },
-
+  primaryButtonDisabled: {
+    opacity: 0.7,
+  },
   primaryButtonText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 16,
     lineHeight: 24,
     color: colors.primaryForeground,
   },
-
   ghostButton: {
     width: '100%',
     height: 52,
@@ -176,18 +175,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   ghostButtonText: {
     fontFamily: 'Nunito_700Bold',
     fontSize: 16,
     lineHeight: 24,
     color: colors.mutedForeground,
   },
-
   pressed: {
     opacity: 0.7,
   },
-
   primaryButtonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
